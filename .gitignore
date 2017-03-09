@@ -1,0 +1,8 @@
+.DS_Store
+bower_components
+node_modules
+/config.coffee
+*.html
+*.map
+*.js
+*.log
