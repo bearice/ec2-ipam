@@ -1,0 +1,13 @@
+{
+    "mysql":{
+        "host":"***REMOVED***",
+        "port":"3306",
+        "user":"ipam",
+        "password":"***REMOVED***",
+        "database":"ipam"
+    },
+    "aws":{
+        "region":"cn-north-1"
+    }
+}
+

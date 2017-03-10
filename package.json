@@ -5,6 +5,8 @@
   "main": "lib/index.js",
   "author": "Bearice Ren <bearice@icybear.net>",
   "dependencies": {
+    "aws-sdk": "^2.25.0",
+    "ip": "^1.1.5",
     "koa": "^2.1.0",
     "koa-better-body": "^3.0.2",
     "koa-bodyparser": "^4.1.0",
@@ -14,6 +16,7 @@
     "koa-json-error": "^3.1.0",
     "koa-logger": "^2.0.1",
     "koa-path-match": "^2.0.0",
-    "koa-router": "^5.4.0"
+    "koa-router": "^5.4.0",
+    "mysql2": "^1.2.0"
   }
 }
