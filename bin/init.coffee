@@ -2,9 +2,15 @@
 ds = require '../backend/ec2'
 main = (id)->
     ret = await ds.initSubnet id
-    console.info ret
+    console.info """
+        Result: #{ret.total} addresses in total
+                #{ret.occupied} addresses in occupied
+                #{ret.free} addresses in free
+    """
 
 if process.argv.length == 2
-    console.info "init.js <subnet_id>"
+    console.info "#{process.argv[1]} <subnet-id>"
 else
-    main(process.argv[2]).then(console.info).catch(console.error)
+    main(process.argv[2])
+        .catch(console.error)
+        .then(process.exit)

@@ -91,7 +91,7 @@ class EC2Datasource
             """,[ip]
 
     # Scan for any `ready` state address, unassgin it and mark it free.
-    recycleAddress: (subnetId, limit)->
+    recycleAddress: (subnetId, limit=100)->
         withTransaction (conn) ->
             [rows,cols] = await conn.query """
                 SELECT `ip`,`iface` FROM `allocation`
@@ -101,6 +101,7 @@ class EC2Datasource
             for row in rows
                 ip = row.ip
                 ifaceId = row.iface
+                console.info "Recycling address #{ip} on #{ifaceId}"
                 # Unassign it
                 await ec2.unassignPrivateIpAddresses(
                     NetworkInterfaceId: ifaceId
@@ -109,9 +110,10 @@ class EC2Datasource
                 # Mark as free
                 await conn.execute """
                     UPDATE `allocation`
-                    SET `status`='ready', `iface`=NULL
+                    SET `status`='free', `iface`=NULL
                     WHERE `ip`=?
                 """,[ip]
+            return rows.length
 
     # Read subnet data from AWS then insert records into mysql
     initSubnet: (subnetId)->
@@ -123,23 +125,30 @@ class EC2Datasource
 
         #First 4 address are reversed for internal usage
         rows[i] = [IP.fromLong(i+base),subnetId,'reserved',null,false] for i in [0..3]
-
+        occupied_count = 4
         #Query AWS for occupied address
         res = await ec2.describeNetworkInterfaces(Filters:[{Name:'subnet-id',Values:[subnetId]}]).promise()
         for intf in res.NetworkInterfaces
             for a in intf.PrivateIpAddresses
                 i = IP.toLong(a.PrivateIpAddress) - base
-                console.info a.PrivateIpAddress
-                console.info rows[i]
+                #console.info a.PrivateIpAddress
+                #console.info rows[i]
                 rows[i] = [a.PrivateIpAddress, subnetId, 'occupied', intf.NetworkInterfaceId, a.Primary]
+                occupied_count+=1
 
-        console.info row for row in rows
+        #console.info row for row in rows
         await withConnection (conn)->
             conn.query """
                 INSERT INTO `allocation` (
                     `ip`, `subnet`, `status`, `iface`, `primary`
                 ) VALUES ?
             """, [rows]
+
+        return {
+            total: rows.length
+            occupied: occupied_count
+            free: rows.length - occupied_count
+        }
 
     # Clear all allocation records on interface
     flushIface: (ifaceId) ->
