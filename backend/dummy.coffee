@@ -10,4 +10,7 @@ module.exports = {
     getSubnetOfIface: (ifaceId) -> @getSubnet ifaceId
     allocateAddress: (ifaceId) -> '172.30.4.9'
     releaseAddress: ->
+    initSubnet: ->
+    recycleAddress: ->
+    flushIface: ->
 }
