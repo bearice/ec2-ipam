@@ -83,7 +83,7 @@ class EC2Datasource
     # Mark ip as ready, for later use
     releaseAddress: (ifaceId,ip) ->
         # Mark ip as ready
-        await withConnection (conn) ->
+        withConnection (conn) ->
             await conn.execute """
                 UPDATE `allocation`
                 SET `status`='ready'
@@ -107,13 +107,13 @@ class EC2Datasource
                     PrivateIpAddresses: [ip]
                 ).promise()
                 # Mark as free
-                await withConnection (conn) ->
-                    await conn.execute """
-                        UPDATE `allocation`
-                        SET `status`='ready', `iface`=NULL
-                        WHERE `ip`=?
-                    """,[ip]
+                await conn.execute """
+                    UPDATE `allocation`
+                    SET `status`='ready', `iface`=NULL
+                    WHERE `ip`=?
+                """,[ip]
 
+    # Read subnet data from AWS then insert records into mysql
     initSubnet: (subnetId)->
         subnet = {block} = await @getSubnet subnetId
 
@@ -135,7 +135,11 @@ class EC2Datasource
 
         console.info row for row in rows
         await withConnection (conn)->
-            conn.query "INSERT INTO `allocation` (`ip`, `subnet`, `status`, `iface`, `primary`) VALUES ?", [rows]
+            conn.query """
+                INSERT INTO `allocation` (
+                    `ip`, `subnet`, `status`, `iface`, `primary`
+                ) VALUES ?
+            """, [rows]
 
     # Clear all allocation records on interface
     flushIface: (ifaceId) ->
