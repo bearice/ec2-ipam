@@ -5,7 +5,7 @@ KJson = require 'koa-json'
 KRouter = require 'koa-trie-router'
 KLogger = require 'koa-logger'
 
-ds = require './datasource/ec2'
+ds = require './backend/ec2'
 app = new Koa()
 router = new KRouter()
 
@@ -33,6 +33,8 @@ router.post "/IpamDriver.RequestPool", (ctx)->
     req = ctx.request.body
     ifaceId = req.Options['eni-id']
     subnet = await ds.getSubnetOfIface ifaceId
+
+    #await ds.flushSubnet subnet.id
     ctx.body = {
         "PoolID": ifaceId
         "Pool": subnet.cidr
