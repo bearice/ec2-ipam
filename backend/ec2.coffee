@@ -137,4 +137,13 @@ class EC2Datasource
         await withConnection (conn)->
             conn.query "INSERT INTO `allocation` (`ip`, `subnet`, `status`, `iface`, `primary`) VALUES ?", [rows]
 
+    # Clear all allocation records on interface
+    flushIface: (ifaceId) ->
+        withConnection (conn)->
+            conn.query """
+                UPDATE `allocation`
+                SET `status`='ready'
+                WHERE `iface`=? AND `primary`=0
+            """, [ifaceId]
+
 module.exports = new EC2Datasource

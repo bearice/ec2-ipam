@@ -34,7 +34,10 @@ router.post "/IpamDriver.RequestPool", (ctx)->
     ifaceId = req.Options['eni-id']
     subnet = await ds.getSubnetOfIface ifaceId
 
-    #await ds.flushSubnet subnet.id
+    # We should flush interface here since we had 'RequiresRequestReplay' flag set
+    # and RequestAddress will be call every time docker boots up, even in case of
+    # unclean shutdown.
+    await ds.flushIface subnet.id
     ctx.body = {
         "PoolID": ifaceId
         "Pool": subnet.cidr
