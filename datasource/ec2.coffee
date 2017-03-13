@@ -41,46 +41,52 @@ class EC2Datasource
         subnetId = res.NetworkInterfaces[0].SubnetId
         await @getSubnet subnetId
 
+    # Find any address ready to use on iface, if no ready ips available,
+    # allocate and assign new one. Will throw exception if no free ip available.
     allocateAddress: (ifaceId) ->
         subnet = await @getSubnetOfIface ifaceId
         withTransaction (conn) ->
-            # Select a free address from pool, order by least used
+            # Select a ready to use address from pool
             [rows,cols] = await conn.query """
                 SELECT `ip` FROM `allocation`
-                WHERE `status`='free' and `subnet`=?
+                WHERE `status`='ready' and `iface`=?
                 ORDER BY `ts` LIMIT 1 FOR UPDATE
-            """, [subnet.id]
-            throw new Exception "no address available" if rows.length is 0
-            ip = rows[0].ip
+            """, [ifaceId]
+            if rows.length > 0
+                ip = rows[0].ip
+            else
+                # Select a free address from pool, and assign it.
+                [rows,cols] = await conn.query """
+                    SELECT `ip` FROM `allocation`
+                    WHERE `status`='free' and `subnet`=?
+                    ORDER BY `ts` LIMIT 1 FOR UPDATE
+                """, [subnet.id]
 
-            # Asks aws to bind ip to ENI
-            await ec2.assignPrivateIpAddresses(
-                NetworkInterfaceId: ifaceId
-                PrivateIpAddresses: [ip]
-            ).promise()
+                throw new Exception "no address available" if rows.length is 0
+                ip = rows[0].ip
+
+                # Assign ip to ENI
+                await ec2.assignPrivateIpAddresses(
+                    NetworkInterfaceId: ifaceId
+                    PrivateIpAddresses: [ip]
+                ).promise()
 
             #Mark it is used
             await conn.execute """
                 UPDATE `allocation`
-                SET `status`='allocated',
-                    `owner`=?
+                SET `status`='occupied',
+                    `iface`=?
                 WHERE `ip`=?
             """,[ifaceId,ip]
             return ip
 
+    # Mark ip as ready, for later use
     releaseAddress: (ifaceId,ip) ->
-        # Unassign it
-        await ec2.unassignPrivateIpAddresses(
-            NetworkInterfaceId: ifaceId
-            PrivateIpAddresses: [ip]
-        ).promise()
-
-        # Mark ip as free
+        # Mark ip as ready
         await withConnection (conn) ->
             await conn.execute """
                 UPDATE `allocation`
-                SET `status`='free',
-                    `owner`=NULL
+                SET `status`='ready'
                 WHERE `ip`=?
             """,[ip]
 
