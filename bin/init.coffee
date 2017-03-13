@@ -1,5 +1,5 @@
-ds = require './datasource/ec2'
-
+#!/usr/bin/env coffee
+ds = require '../datasource/ec2'
 main = (id)->
     ret = await ds.initSubnet id
     console.info ret
