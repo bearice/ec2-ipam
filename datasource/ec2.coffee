@@ -90,4 +90,51 @@ class EC2Datasource
                 WHERE `ip`=?
             """,[ip]
 
+    # Scan for any `ready` state address, unassgin it and mark it free.
+    recycleAddress: (subnetId, limit)->
+        withTransaction (conn) ->
+            [rows,cols] = await conn.query """
+                SELECT `ip`,`iface` FROM `allocation`
+                WHERE `status`='ready' and `subnet`=?
+                ORDER BY `ts` LIMIT ? FOR UPDATE
+            """, [subnetId, limit]
+            for row in rows
+                ip = row.ip
+                ifaceId = row.iface
+                # Unassign it
+                await ec2.unassignPrivateIpAddresses(
+                    NetworkInterfaceId: ifaceId
+                    PrivateIpAddresses: [ip]
+                ).promise()
+                # Mark as free
+                await withConnection (conn) ->
+                    await conn.execute """
+                        UPDATE `allocation`
+                        SET `status`='ready', `iface`=NULL
+                        WHERE `ip`=?
+                    """,[ip]
+
+    initSubnet: (subnetId)->
+        subnet = {block} = await @getSubnet subnetId
+
+        base = IP.toLong block.firstAddress
+        last  = IP.toLong block.lastAddress
+        rows = [base..last].map (i)->[IP.fromLong(i),subnetId,'free',null,false]
+
+        #First 4 address are reversed for internal usage
+        rows[i] = [IP.fromLong(i+base),subnetId,'reserved',null,false] for i in [0..3]
+
+        #Query AWS for occupied address
+        res = await ec2.describeNetworkInterfaces(Filters:[{Name:'subnet-id',Values:[subnetId]}]).promise()
+        for intf in res.NetworkInterfaces
+            for a in intf.PrivateIpAddresses
+                i = IP.toLong(a.PrivateIpAddress) - base
+                console.info a.PrivateIpAddress
+                console.info rows[i]
+                rows[i] = [a.PrivateIpAddress, subnetId, 'occupied', intf.NetworkInterfaceId, a.Primary]
+
+        console.info row for row in rows
+        await withConnection (conn)->
+            conn.query "INSERT INTO `allocation` (`ip`, `subnet`, `status`, `iface`, `primary`) VALUES ?", [rows]
+
 module.exports = new EC2Datasource
