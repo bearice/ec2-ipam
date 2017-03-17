@@ -12,6 +12,9 @@ withConnection = (cb) ->
     conn = await cpool.getConnection()
     try
         await cb(conn)
+    catch e
+        console.info e.stack
+        throw new Error e
     finally
         conn.release()
 
@@ -62,7 +65,7 @@ class EC2Datasource
                     ORDER BY `ts` LIMIT 1 FOR UPDATE
                 """, [subnet.id]
 
-                throw new Exception "no address available" if rows.length is 0
+                throw new Error "No address available in subnet #{subnet.id}" if rows.length is 0
                 ip = rows[0].ip
 
                 # Assign ip to ENI
@@ -151,12 +154,21 @@ class EC2Datasource
         }
 
     # Clear all allocation records on interface
-    flushIface: (ifaceId) ->
+    initIface: (ifaceId) ->
+        res = await ec2.describeNetworkInterfaces(NetworkInterfaceIds:[ifaceId]).promise()
+        intf = res.NetworkInterfaces[0]
+        throw new Error "Interface #{ifaceId} not found" unless intf
+        ips = (a.PrivateIpAddress for a in intf.PrivateIpAddresses)
         withConnection (conn)->
-            conn.query """
+            await conn.query """
                 UPDATE `allocation`
-                SET `status`='ready'
-                WHERE `iface`=? AND `primary`=0
-            """, [ifaceId]
+                SET `primary`=1
+                WHERE `ip`=?
+            """, [a.PrivateIpAddress]
+            await conn.query """
+                UPDATE `allocation`
+                SET `status`='ready',`iface`=?
+                WHERE `ip` in (?)
+            """, [ifaceId,ips]
 
 module.exports = new EC2Datasource

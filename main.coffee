@@ -14,6 +14,9 @@ app.use KLogger()
 app.use KJson pretty: false, param: 'pretty'
 app.use KBodyParser detectJSON: (ctx)->true
 
+router.get "/",(ctx)->
+    ctx.body = "Daikon IPAM Module"
+
 # API Doc: https://github.com/docker/libnetwork/blob/master/docs/ipam.md
 #
 router.post "/Plugin.Activate", (ctx)->
@@ -37,7 +40,7 @@ router.post "/IpamDriver.RequestPool", (ctx)->
     # We should flush interface here since we had 'RequiresRequestReplay' flag set
     # and RequestAddress will be call every time docker boots up, even in case of
     # unclean shutdown.
-    await ds.flushIface subnet.id
+    await ds.initIface ifaceId
     ctx.body = {
         "PoolID": ifaceId
         "Pool": subnet.cidr
@@ -65,14 +68,17 @@ router.post "/IpamDriver.ReleaseAddress", (ctx)->
     ctx.body = {}
 
 app.use (ctx,next)->
-    console.info "\n===REQUEST==="
-    console.info ctx.request
-    console.info "\n===BODY==="
-    console.info ctx.request.body
-    await next()
-    console.info "\n===RESPONSE==="
-    console.info ctx.body
-    console.info "\n===END==="
+    if ctx.request.method is 'POST'
+        console.info "\n===REQUEST==="
+        console.info ctx.request
+        console.info "\n===BODY==="
+        console.info ctx.request.body
+        await next()
+        console.info "\n===RESPONSE==="
+        console.info ctx.body
+        console.info "\n===END==="
+    else
+        await next()
 
 app.use router.middleware()
 

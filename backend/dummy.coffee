@@ -12,5 +12,5 @@ module.exports = {
     releaseAddress: ->
     initSubnet: ->
     recycleAddress: ->
-    flushIface: ->
+    initIface: ->
 }
