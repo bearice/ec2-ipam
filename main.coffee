@@ -12,7 +12,7 @@ router = new KRouter()
 app.use KError(format:(err)->{Error:err.stack})
 app.use KLogger()
 app.use KJson pretty: false, param: 'pretty'
-app.use KBodyParser detectJSON: (ctx)->true
+app.use KBodyParser detectJSON: (ctx)->ctx.request.method is 'POST'
 
 router.get "/",(ctx)->
     ctx.body = "Daikon IPAM Module"
@@ -69,14 +69,9 @@ router.post "/IpamDriver.ReleaseAddress", (ctx)->
 
 app.use (ctx,next)->
     if ctx.request.method is 'POST'
-        console.info "\n===REQUEST==="
-        console.info ctx.request
-        console.info "\n===BODY==="
-        console.info ctx.request.body
+        console.info ">>", ctx.request.body
         await next()
-        console.info "\n===RESPONSE==="
-        console.info ctx.body
-        console.info "\n===END==="
+        console.info "<<", ctx.body
     else
         await next()
 
