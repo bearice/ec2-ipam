@@ -1,14 +1,14 @@
-= ec2-ipam
+# ec2-ipam
 
 A docker ipam driver for ipvlan networks on ec2
 
-== Notes
+## Notes about coffeescript
 
-The code itself is written in [http://coffeescript.org/v2 coffee-script2].
+The code itself is written in [coffee-script2](http://coffeescript.org/v2).
 you can have it installed by `npm install coffeescript@next`, or you may use the
 Dockerfile provided
 
-== Installing
+## Installing
 
 You will need to add a subnet to your VPC and add ENIs to your instances,
 I will take eth1 as a example.
@@ -58,7 +58,7 @@ At last, pull the trigger with `main.coffee` and you are all set.
 You can have the docker network created by running `mknet.sh` on your instances.
 you only need to run it once as long as you don't delete the network.
 
-== Multi-tenancy
+## Multi-tenancy
 
 You can have multi ENIs installed to your ec2 as much as AWS allows you to do.
 and you could have these ENIs isolated by enforcing subnet access lists.
