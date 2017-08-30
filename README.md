@@ -2,7 +2,9 @@
 
 A docker ipam driver for ipvlan networks on ec2
 
-## Notes about coffeescript
+## Notes about node & coffeescript
+
+The project uses async/await feartures that require new versions of nodejs, 8.x works fine.
 
 The code itself is written in [coffee-script2](http://coffeescript.org/v2).
 you can have it installed by `npm install coffeescript@next`, or you may use the
