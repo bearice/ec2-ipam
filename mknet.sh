@@ -18,4 +18,4 @@ echo ENI=$ENI_ID
 echo INSTANCE=$MY_ID
 
 docker network rm $NET_NAME
-docker network create -d ipvlan --ipam-driver ec2-eni -o parent=eth1 --ipam-opt instance-id=$MY_ID --ipam-opt eni-id=$ENI_ID $NET_NAME
+docker network create -d ipvlan --ipam-driver ec2-ipam -o parent=eth1 --ipam-opt instance-id=$MY_ID --ipam-opt eni-id=$ENI_ID $NET_NAME
